@@ -9,6 +9,8 @@ import os
 import re
 
 from aqt import mw
+from aqt import AnkiQt
+from aqt.browser import Browser
 from aqt.qt import QDialog, QVBoxLayout, Qt, QComboBox, QPushButton, QTextBrowser, QHBoxLayout, QTextDocument, QLabel
 from aqt import gui_hooks
 
@@ -17,8 +19,7 @@ WINDOW_MIN_WIDTH = 500
 WINDOW_MIN_HEIGHT = 600
 STATES = ['full text', 'first letters of each word', 'first words of each line']
 
-
-def convert_to_plaintext(html_content):
+def convert_to_plaintext(html_content: str) -> str:
     # Create a QTextDocument
     text_document = QTextDocument()
 
@@ -34,7 +35,7 @@ def convert_to_plaintext(html_content):
 class MemorizerMeDialog(QDialog):
     """Memorizer.me plugin main window."""
 
-    def __init__(self, parent):
+    def __init__(self, parent: AnkiQt):
         QDialog.__init__(self)
         self.setWindowFlags(Qt.WindowType.Window)
         self.setMinimumWidth(WINDOW_MIN_WIDTH)
@@ -166,14 +167,13 @@ def on_setup_editor_buttons(buttons, editor):
     return buttons
 
 
-def on_change_row(browser):
+def on_change_row(browser: Browser) -> None: 
     """Hook that gets called each time the browser changes rows."""
     note = browser.editor.note
     if note:
         mw.dialog.update_plugin_input_note(note)
 
-
-def setup_main(main_window):
+def setup_main(main_window: AnkiQt):
     """Registers plugin with Anki."""
     # Add a button to card browser
     gui_hooks.editor_did_init_buttons.append(on_setup_editor_buttons)
