@@ -40,7 +40,7 @@ class MemorizerTransforms:
             m = match[0]
             return m[0] + len(m[1:]) * '_'
 
-        pattern_letters = r"""[^ ,\.!\?:;—\–\-„“”«»`’¿¡~\[\]\{\}\(\)\*&\^%‰¤\$¢£€₧¥₣₤'"\/<>#@\|\u0964\\\n]([^ \n]*)"""
+        pattern_letters = r"""\w+"""
         return re.sub(pattern_letters, callable, text)
 
     @staticmethod
