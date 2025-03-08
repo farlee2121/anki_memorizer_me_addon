@@ -44,6 +44,14 @@ class MemorizerTransforms:
         return re.sub(pattern_letters, callable, text)
 
     @staticmethod
+    def wordStartsOnly_ForHtml(text: str) -> str:
+        """Replace all but the starts of words, punctuation and whitespace with underscores. I.e. This is blanked! -> T___ i_ b______!"""
+        plaintext = HtmlTransforms.convert_to_plaintext(text)
+        wordstarts = MemorizerTransforms.wordStartsOnly(plaintext)
+        htmlEscaped = HtmlTransforms.escapeNewlinesForHtml(wordstarts)
+        return htmlEscaped
+
+    @staticmethod
     def lineStartsOnly(text: str) -> str:
         """Show only the first few words of every line. I.e. Line one text is this \n Line two text is that -> Line one \n Line two"""
         def callable(match):
@@ -51,50 +59,49 @@ class MemorizerTransforms:
 
         pattern_words = r"^((\s*[\S]+){0,2}).*"
         return re.sub(pattern_words, callable, text, flags=re.MULTILINE)
+    
+    @staticmethod
+    def lineStartsOnly_ForHtml(text: str) -> str:
+        """Show only the first few words of every line. I.e. Line one text is this \n Line two text is that -> Line one \n Line two"""
+        plaintext = HtmlTransforms.convert_to_plaintext(text)
+        linestarts = MemorizerTransforms.lineStartsOnly(plaintext)
+        return HtmlTransforms.escapeNewlinesForHtml(linestarts)
 
 
-class WordStartsFilter():
+class WordStartsFilter:
     """Adds a memorizer-wordstarts: template filter"""
-
     FILTER_ID = "memorizer-wordstarts"
     # called each time a custom filter is encountered
+    @staticmethod
     def wordstarts_filter(
-        self,
         field_text: str,
         field_name: str,
         filter_name: str,
         context: TemplateRenderContext,
     ) -> str:
-        if not filter_name.lower() == self.FILTER_ID:
+        if not filter_name.lower() == WordStartsFilter.FILTER_ID:
             # not our filter, return string unchanged
             return field_text
         else:
-            print(f"Field_Text: {field_text}")
-            plaintext = HtmlTransforms.convert_to_plaintext(field_text)
-            wordstarts = MemorizerTransforms.wordStartsOnly(plaintext)
-            htmlEscaped = HtmlTransforms.escapeNewlinesForHtml(wordstarts)
-            print(f"transformed: {wordstarts}")
-            return htmlEscaped
+            return MemorizerTransforms.wordStartsOnly_ForHtml(field_text)
         
-class LineStartsFilter():
+class LineStartsFilter:
     """Adds a memorizer-wordstarts: template filter"""
 
     FILTER_ID = "memorizer-linestarts"
     # called each time a custom filter is encountered
+    @staticmethod
     def linestarts_filter(
-        self,
         field_text: str,
         field_name: str,
         filter_name: str,
         context: TemplateRenderContext,
     ) -> str:
-        if not filter_name.lower() == self.FILTER_ID:
+        if not filter_name.lower() == LineStartsFilter.FILTER_ID:
             # not our filter, return string unchanged
             return field_text
         else:
-            plaintext = HtmlTransforms.convert_to_plaintext(field_text)
-            linestarts = MemorizerTransforms.lineStartsOnly(plaintext)
-            return HtmlTransforms.escapeNewlinesForHtml(linestarts)
+            return MemorizerTransforms.lineStartsOnly_ForHtml(field_text)
         
 class Notetype: 
     ID = "Memorizer"
@@ -173,8 +180,8 @@ def add_card_types():
 
 def setup_main():
     """Registers plugin with Anki."""
-    hooks.field_filter.append(WordStartsFilter().wordstarts_filter)
-    hooks.field_filter.append(LineStartsFilter().linestarts_filter)
+    hooks.field_filter.append(WordStartsFilter.wordstarts_filter)
+    hooks.field_filter.append(LineStartsFilter.linestarts_filter)
     gui_hooks.main_window_did_init.append(add_card_types)
 
 # register plugin with hooks
