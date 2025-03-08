@@ -5,184 +5,177 @@ The plugin does 2 things:
 - add a menu button to the card browser that allows one to start an interactive dialog from the selected card
 - add a memorizer.me card type that allows to easily add cards from input text
 """
-import os
 import re
 
-from aqt import mw
-from aqt import AnkiQt
-from aqt.browser import Browser
-from aqt.qt import QDialog, QVBoxLayout, Qt, QComboBox, QPushButton, QTextBrowser, QHBoxLayout, QTextDocument, QLabel
-from aqt import gui_hooks
-
-ADDON_PATH = os.path.dirname(__file__)
-WINDOW_MIN_WIDTH = 500
-WINDOW_MIN_HEIGHT = 600
-STATES = ['full text', 'first letters of each word', 'first words of each line']
-
-def convert_to_plaintext(html_content: str) -> str:
-    # Create a QTextDocument
-    text_document = QTextDocument()
-
-    # Set HTML content in the QTextDocument
-    text_document.setHtml(html_content)
-
-    # Extract plain text
-    plain_text = text_document.toPlainText()
-
-    return plain_text
+from aqt import mw, AnkiQt, gui_hooks
+from anki.models import ModelManager, NotetypeDict, FieldDict
+from aqt.qt import QTextDocument
+from anki import hooks
+from anki.template import TemplateRenderContext
 
 
-class MemorizerMeDialog(QDialog):
-    """Memorizer.me plugin main window."""
+class HtmlTransforms:
+    @staticmethod
+    def convert_to_plaintext(html_content: str) -> str:
+        # Create a QTextDocument
+        text_document = QTextDocument()
 
-    def __init__(self, parent: AnkiQt):
-        QDialog.__init__(self)
-        self.setWindowFlags(Qt.WindowType.Window)
-        self.setMinimumWidth(WINDOW_MIN_WIDTH)
-        self.setMinimumHeight(WINDOW_MIN_HEIGHT)
-        self.visible = True
-        self.parent = parent
-        self.setupUi()
-        self.note = None
-        self.display_state = 0
+        # Set HTML content in the QTextDocument
+        text_document.setHtml(html_content)
 
-    def setupUi(self):
-        """Setup the user interface."""
-        # Create widgets
-        select_box = QComboBox()
-        self.select_box = select_box
-        button_left = QPushButton("←")
-        button_right = QPushButton("→")
+        # Extract plain text
+        plain_text = text_document.toPlainText()
 
-        state_label = QLabel("Current display state:")
-        current_label = QLabel("")
-        self.current_label = current_label
+        return plain_text
 
-        text_edit = QTextBrowser()
-        self.text_edit = text_edit
+    @staticmethod
+    def escapeNewlinesForHtml(text: str) -> str:
+        return text.replace("\n", "<br>")
 
-        # Set up button layout
-        button_layout = QHBoxLayout()
-        button_layout.addWidget(select_box)
-        button_layout.addWidget(button_left)
-        button_layout.addWidget(button_right)
+class MemorizerTransforms: 
+    @staticmethod
+    def wordStartsOnly(text: str) -> str:
+        """Replace all but the starts of words, punctuation and whitespace with underscores. I.e. This is blanked! -> T___ i_ b______!"""
+        def callable(match):
+            m = match[0]
+            return m[0] + len(m[1:]) * '_'
 
-        # Set up state layout
-        state_layout = QHBoxLayout()
-        state_layout.addWidget(state_label)
-        state_layout.addWidget(current_label)
+        pattern_letters = r"""[^ ,\.!\?:;—\–\-„“”«»`’¿¡~\[\]\{\}\(\)\*&\^%‰¤\$¢£€₧¥₣₤'"\/<>#@\|\u0964\\\n]([^ \n]*)"""
+        return re.sub(pattern_letters, callable, text)
 
-        # Main layout
-        main_layout = QVBoxLayout()
-        main_layout.addLayout(button_layout)
-        main_layout.addLayout(state_layout)
-        main_layout.addWidget(text_edit)
+    @staticmethod
+    def lineStartsOnly(text: str) -> str:
+        """Show only the first few words of every line. I.e. Line one text is this \n Line two text is that -> Line one \n Line two"""
+        def callable(match):
+            return match[1]
 
-        self.setLayout(main_layout)
-
-        # Connect signals to slots
-        button_left.clicked.connect(self.move_view_left)
-        button_right.clicked.connect(self.move_view_right)
-        select_box.currentIndexChanged.connect(self.update_displayed_text)
-
-    def move_view_left(self):
-        """Change to previous display state."""
-        self.display_state = (self.display_state - 1) % 3
-        self.update_displayed_text()
-
-    def move_view_right(self):
-        """Change to next display state."""
-        self.display_state = (self.display_state + 1) % 3
-        self.update_displayed_text()
-
-    def show_window(self, editor):
-        """This function gets called when the browser button gets clicked."""
-        self.show()
-
-    def update_plugin_input_note(self, note):
-        """This function gets called when the browser changes notes."""
-        if note:
-            self.note = note
-            # update the select box
-            self.select_box.clear()
-            for (name, value) in note.items():
-                self.select_box.addItem(name)
-
-    def update_displayed_text(self):
-        """This updates the text in the dialog window.
-        Can get called for several reasons:
-        - browser changed card
-        - user clicked arrow
-        - user changed field
-        """
-        if self.note:
-            index = self.select_box.currentIndex()
-            if index > -1:
-                values = list(self.note.values())
-                input_text = values[index]
-                input_textonly = convert_to_plaintext(input_text)
-
-                if self.display_state == 0:
-                    # display full text
-                    output_text = input_text
-                elif self.display_state == 1:
-                    # display first letters
-                    def callable(match):
-                        m = match[0]
-                        return m[0] + len(m[1:]) * '_'
-
-                    pattern_letters = r"""[^ ,\.!\?:;—\–\-„“”«»`’¿¡~\[\]\{\}\(\)\*&\^%‰¤\$¢£€₧¥₣₤'"\/<>#@\|\u0964\\\n]([^ \n]*)"""
-                    output_text = re.sub(pattern_letters, callable, input_textonly)
-                    output_text = output_text.replace("\n", "<br>")
-
-                elif self.display_state == 2:
-                    # display first words
-
-                    def callable(match):
-                        return match[1]
-
-                    pattern_words = r"^((\s*[\S]+){0,2}).*"
-                    output_text = re.sub(pattern_words, callable, input_textonly, flags=re.MULTILINE)
-                    output_text = output_text.replace("\n", "<br>")
-
-                print("%%%%%%%%% output %%%%%%%%", output_text)
-
-                self.current_label.setText(STATES[self.display_state])
-                self.text_edit.setHtml(output_text)
+        pattern_words = r"^((\s*[\S]+){0,2}).*"
+        return re.sub(pattern_words, callable, text, flags=re.MULTILINE)
 
 
-def on_setup_editor_buttons(buttons, editor):
-    """Add a button to card browser."""
-    icon = os.path.join(ADDON_PATH, 'icons', 'editor.png')
+class WordStartsFilter():
+    """Adds a memorizer-wordstarts: template filter"""
 
-    b = editor.addButton(
-        icon=icon,
-        cmd="memorizer_me_button",
-        func=lambda editor=editor: mw.dialog.show_window(editor),
-        tip="Show memorizer.me plugin window",
-        disables=False,
-    )
+    FILTER_ID = "memorizer-wordstarts"
+    # called each time a custom filter is encountered
+    def wordstarts_filter(
+        self,
+        field_text: str,
+        field_name: str,
+        filter_name: str,
+        context: TemplateRenderContext,
+    ) -> str:
+        if not filter_name.lower() == self.FILTER_ID:
+            # not our filter, return string unchanged
+            return field_text
+        else:
+            print(f"Field_Text: {field_text}")
+            plaintext = HtmlTransforms.convert_to_plaintext(field_text)
+            wordstarts = MemorizerTransforms.wordStartsOnly(plaintext)
+            htmlEscaped = HtmlTransforms.escapeNewlinesForHtml(wordstarts)
+            print(f"transformed: {wordstarts}")
+            return htmlEscaped
+        
+class LineStartsFilter():
+    """Adds a memorizer-wordstarts: template filter"""
 
-    buttons.append(b)
-    return buttons
+    FILTER_ID = "memorizer-linestarts"
+    # called each time a custom filter is encountered
+    def linestarts_filter(
+        self,
+        field_text: str,
+        field_name: str,
+        filter_name: str,
+        context: TemplateRenderContext,
+    ) -> str:
+        if not filter_name.lower() == self.FILTER_ID:
+            # not our filter, return string unchanged
+            return field_text
+        else:
+            plaintext = HtmlTransforms.convert_to_plaintext(field_text)
+            linestarts = MemorizerTransforms.lineStartsOnly(plaintext)
+            return HtmlTransforms.escapeNewlinesForHtml(linestarts)
+        
+class Notetype: 
+    ID = "Memorizer"
+    FULLTEXT_FIELD_ID = "OriginalText"
+    # WORDSTARTS_FIELD_ID = "Text - Wordstarts only"
+    # LINESTARTS_FIELD_ID = "Text - Linestarts only"
 
+    DEFAULT_STYLE = """\
+    .card {
+        font-family: arial;
+        font-size: 20px;
+        text-align: left;
+        color: black;
+        background-color: white;
+    }\
+    """
 
-def on_change_row(browser: Browser) -> None: 
-    """Hook that gets called each time the browser changes rows."""
-    note = browser.editor.note
-    if note:
-        mw.dialog.update_plugin_input_note(note)
+class FulltextCard: 
+    ID = "Memorizer Fulltext"
+    FRONT_TEMPLATE = "{{" + Notetype.FULLTEXT_FIELD_ID + "}}"
+    BACK_TEMPLATE = "{{FrontSide}}"
 
-def setup_main(main_window: AnkiQt):
+class WordStartCard: 
+    ID = "Memorizer Wordstarts"
+    FRONT_TEMPLATE = "{{" + WordStartsFilter.FILTER_ID + ":" + Notetype.FULLTEXT_FIELD_ID + "}}"
+    BACK_TEMPLATE = f"""\
+        {{{{FrontSide}}}}
+
+        <hr id=answer>
+
+        {{{{{Notetype.FULLTEXT_FIELD_ID}}}}}\
+    """
+
+class LineStartCard: 
+    ID = "Memorizer Linestarts"
+    FRONT_TEMPLATE = "{{"+ LineStartsFilter.FILTER_ID + ":" + Notetype.FULLTEXT_FIELD_ID + "}}"
+    BACK_TEMPLATE = f"""\
+        {{{{FrontSide}}}}
+
+        <hr id=answer>
+
+        {{{{{Notetype.FULLTEXT_FIELD_ID}}}}}\
+    """
+
+def add_card_types():
+    models: ModelManager = mw.col.models
+
+    # if models.by_name(Notetype.ID):
+    #     return models.by_name(Notetype.ID)
+
+    memorizerNoteType : NotetypeDict = models.new(Notetype.ID)
+    # Add fields:
+    models.addField(memorizerNoteType, models.new_field(Notetype.FULLTEXT_FIELD_ID))
+    # models.addField(memorizerNoteType, models.new_field(Notetype.WORDSTARTS_FIELD_ID))
+    # models.addField(memorizerNoteType, models.new_field(Notetype.LINESTARTS_FIELD_ID))
+
+    # Add templates (this is all the same. It wouldn't be to hard to make them a class and have a method that aligns the registered cards with what's defined)
+    fulltextCardTemplate = models.new_template(FulltextCard.ID)
+    fulltextCardTemplate['qfmt'] = FulltextCard.FRONT_TEMPLATE
+    fulltextCardTemplate['afmt'] = FulltextCard.BACK_TEMPLATE
+    models.add_template(memorizerNoteType, fulltextCardTemplate)
+
+    wordstartsCardTemplate = models.new_template(WordStartCard.ID)
+    wordstartsCardTemplate['qfmt'] = WordStartCard.FRONT_TEMPLATE
+    wordstartsCardTemplate['afmt'] = WordStartCard.BACK_TEMPLATE
+    models.add_template(memorizerNoteType, wordstartsCardTemplate)
+
+    wordstartsCardTemplate = models.new_template(LineStartCard.ID)
+    wordstartsCardTemplate['qfmt'] = LineStartCard.FRONT_TEMPLATE
+    wordstartsCardTemplate['afmt'] = LineStartCard.BACK_TEMPLATE
+    models.add_template(memorizerNoteType, wordstartsCardTemplate)
+
+    memorizerNoteType['css'] = Notetype.DEFAULT_STYLE
+    models.add(memorizerNoteType)
+    return memorizerNoteType
+
+def setup_main():
     """Registers plugin with Anki."""
-    # Add a button to card browser
-    gui_hooks.editor_did_init_buttons.append(on_setup_editor_buttons)
-    # If card browser changes row, updates the input data for the plugin
-    gui_hooks.browser_did_change_row.append(on_change_row)
-
-
-# create instance of Dialog
-mw.dialog = MemorizerMeDialog(mw)
+    hooks.field_filter.append(WordStartsFilter().wordstarts_filter)
+    hooks.field_filter.append(LineStartsFilter().linestarts_filter)
+    gui_hooks.main_window_did_init.append(add_card_types)
 
 # register plugin with hooks
-setup_main(mw)
+setup_main()
