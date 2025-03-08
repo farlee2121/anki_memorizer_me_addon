@@ -51,9 +51,9 @@ Q: why is my filter not returning anything
 Tasks
 - [x] Demonstrate a new note type
 - [x] demonstrate multiple cards per note
-  - [ ] make sure that the plugin updates the models/templates if they already exist
 - [x] figure out how to auto-fill the transformed versions of the text (probably via the field focus method or an in-template transform)
 - [x] make sure I can update text and the transformed text updates accordingly
-- [ ] fix wordstart regex to leave punctuation alone
-- [ ] Break fork relationship? I don't think I'm actually going to use any of the code from the repo I forked
+- [x] fix wordstart regex to leave punctuation alone
+- [x] Break fork relationship? I don't think I'm actually going to use any of the code from the repo I forked
   - [x] delete unused code
+- [ ] make sure that the plugin updates the models/templates if they already exist
