@@ -121,7 +121,7 @@ class Notetype:
 
 class FulltextCard: 
     ID = "Memorizer Fulltext"
-    FRONT_TEMPLATE = "boi boi boi{{" + Notetype.FULLTEXT_FIELD_ID + "}}"
+    FRONT_TEMPLATE = "{{" + Notetype.FULLTEXT_FIELD_ID + "}}"
     BACK_TEMPLATE = "{{FrontSide}}"
 
 class WordStartCard: 
