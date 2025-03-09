@@ -121,7 +121,7 @@ class Notetype:
 
 class FulltextCard: 
     ID = "Memorizer Fulltext"
-    FRONT_TEMPLATE = "{{" + Notetype.FULLTEXT_FIELD_ID + "}}"
+    FRONT_TEMPLATE = "boi boi boi{{" + Notetype.FULLTEXT_FIELD_ID + "}}"
     BACK_TEMPLATE = "{{FrontSide}}"
 
 class WordStartCard: 
@@ -149,34 +149,51 @@ class LineStartCard:
 def add_card_types():
     models: ModelManager = mw.col.models
 
-    # if models.by_name(Notetype.ID):
-    #     return models.by_name(Notetype.ID)
+    if models.by_name(Notetype.ID):
+        memorizerNoteType = models.by_name(Notetype.ID)
+        memorizerNoteType['css'] = Notetype.DEFAULT_STYLE
 
-    memorizerNoteType : NotetypeDict = models.new(Notetype.ID)
-    # Add fields:
-    models.addField(memorizerNoteType, models.new_field(Notetype.FULLTEXT_FIELD_ID))
-    # models.addField(memorizerNoteType, models.new_field(Notetype.WORDSTARTS_FIELD_ID))
-    # models.addField(memorizerNoteType, models.new_field(Notetype.LINESTARTS_FIELD_ID))
+        cardTemplates = memorizerNoteType['tmpls']
 
-    # Add templates (this is all the same. It wouldn't be to hard to make them a class and have a method that aligns the registered cards with what's defined)
-    fulltextCardTemplate = models.new_template(FulltextCard.ID)
-    fulltextCardTemplate['qfmt'] = FulltextCard.FRONT_TEMPLATE
-    fulltextCardTemplate['afmt'] = FulltextCard.BACK_TEMPLATE
-    models.add_template(memorizerNoteType, fulltextCardTemplate)
+        fulltextCardTemplate = cardTemplates[0]
+        fulltextCardTemplate['qfmt'] = FulltextCard.FRONT_TEMPLATE
+        fulltextCardTemplate['afmt'] = FulltextCard.BACK_TEMPLATE
 
-    wordstartsCardTemplate = models.new_template(WordStartCard.ID)
-    wordstartsCardTemplate['qfmt'] = WordStartCard.FRONT_TEMPLATE
-    wordstartsCardTemplate['afmt'] = WordStartCard.BACK_TEMPLATE
-    models.add_template(memorizerNoteType, wordstartsCardTemplate)
+        wordstartsCardTemplate = cardTemplates[1]
+        wordstartsCardTemplate['qfmt'] = WordStartCard.FRONT_TEMPLATE
+        wordstartsCardTemplate['afmt'] = WordStartCard.BACK_TEMPLATE
 
-    wordstartsCardTemplate = models.new_template(LineStartCard.ID)
-    wordstartsCardTemplate['qfmt'] = LineStartCard.FRONT_TEMPLATE
-    wordstartsCardTemplate['afmt'] = LineStartCard.BACK_TEMPLATE
-    models.add_template(memorizerNoteType, wordstartsCardTemplate)
+        linestartsCardTemplate = cardTemplates[2]
+        linestartsCardTemplate['qfmt'] = LineStartCard.FRONT_TEMPLATE
+        linestartsCardTemplate['afmt'] = LineStartCard.BACK_TEMPLATE
 
-    memorizerNoteType['css'] = Notetype.DEFAULT_STYLE
-    models.add(memorizerNoteType)
-    return memorizerNoteType
+        models.save(memorizerNoteType)
+        return memorizerNoteType
+    
+    else:
+        memorizerNoteType : NotetypeDict = models.new(Notetype.ID)
+        # Add fields:
+        models.addField(memorizerNoteType, models.new_field(Notetype.FULLTEXT_FIELD_ID))
+
+        # Add templates (this is all the same. It wouldn't be to hard to make them a class and have a method that aligns the registered cards with what's defined)
+        fulltextCardTemplate = models.new_template(FulltextCard.ID)
+        fulltextCardTemplate['qfmt'] = FulltextCard.FRONT_TEMPLATE
+        fulltextCardTemplate['afmt'] = FulltextCard.BACK_TEMPLATE
+        models.add_template(memorizerNoteType, fulltextCardTemplate)
+
+        wordstartsCardTemplate = models.new_template(WordStartCard.ID)
+        wordstartsCardTemplate['qfmt'] = WordStartCard.FRONT_TEMPLATE
+        wordstartsCardTemplate['afmt'] = WordStartCard.BACK_TEMPLATE
+        models.add_template(memorizerNoteType, wordstartsCardTemplate)
+
+        linestartsCardTemplate = models.new_template(LineStartCard.ID)
+        linestartsCardTemplate['qfmt'] = LineStartCard.FRONT_TEMPLATE
+        linestartsCardTemplate['afmt'] = LineStartCard.BACK_TEMPLATE
+        models.add_template(memorizerNoteType, linestartsCardTemplate)
+
+        memorizerNoteType['css'] = Notetype.DEFAULT_STYLE
+        models.add(memorizerNoteType)
+        return memorizerNoteType
 
 def setup_main():
     """Registers plugin with Anki."""
