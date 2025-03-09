@@ -56,4 +56,8 @@ Tasks
 - [x] fix wordstart regex to leave punctuation alone
 - [x] Break fork relationship? I don't think I'm actually going to use any of the code from the repo I forked
   - [x] delete unused code
-- [ ] make sure that the plugin updates the models/templates if they already exist
+- [x] make sure that the plugin updates the models/templates if they already exist
+
+
+Q: should I add a separate field for the verse number / or "title"?
+- I'm realizing that there isn't easy initial context for what verse I'm working with. I have to guess it from the partial I have. My focus is memorizing the text, not the verse numbers. And if I want to memorize the verse numbers then i should probably add a card that has the verse number as the answer to the full text

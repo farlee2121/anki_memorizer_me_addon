@@ -105,9 +105,8 @@ class LineStartsFilter:
         
 class Notetype: 
     ID = "Memorizer"
+    TITLE_FIELD_ID = "Title"
     FULLTEXT_FIELD_ID = "OriginalText"
-    # WORDSTARTS_FIELD_ID = "Text - Wordstarts only"
-    # LINESTARTS_FIELD_ID = "Text - Linestarts only"
 
     DEFAULT_STYLE = """\
     .card {
@@ -122,27 +121,34 @@ class Notetype:
 class FulltextCard: 
     ID = "Memorizer Fulltext"
     FRONT_TEMPLATE = "{{" + Notetype.FULLTEXT_FIELD_ID + "}}"
-    BACK_TEMPLATE = "{{FrontSide}}"
-
-class WordStartCard: 
-    ID = "Memorizer Wordstarts"
-    FRONT_TEMPLATE = "{{" + WordStartsFilter.FILTER_ID + ":" + Notetype.FULLTEXT_FIELD_ID + "}}"
     BACK_TEMPLATE = f"""\
         {{{{FrontSide}}}}
 
         <hr id=answer>
 
+        {{{{{Notetype.TITLE_FIELD_ID}}}}}\
+    """
+
+class WordStartCard: 
+    ID = "Memorizer Wordstarts"
+    FRONT_TEMPLATE = "{{"+ WordStartsFilter.FILTER_ID + ":" + Notetype.TITLE_FIELD_ID+"}}<br />{{" + WordStartsFilter.FILTER_ID + ":" + Notetype.FULLTEXT_FIELD_ID + "}}"
+    BACK_TEMPLATE = f"""\
+        {{{{FrontSide}}}}
+
+        <hr id=answer>
+        
+        {{{{{Notetype.TITLE_FIELD_ID}}}}}<br />
         {{{{{Notetype.FULLTEXT_FIELD_ID}}}}}\
     """
 
 class LineStartCard: 
     ID = "Memorizer Linestarts"
-    FRONT_TEMPLATE = "{{"+ LineStartsFilter.FILTER_ID + ":" + Notetype.FULLTEXT_FIELD_ID + "}}"
+    FRONT_TEMPLATE = "{{"+ WordStartsFilter.FILTER_ID + ":"+ Notetype.TITLE_FIELD_ID+"}}<br />{{"+ LineStartsFilter.FILTER_ID + ":" + Notetype.FULLTEXT_FIELD_ID + "}}"
     BACK_TEMPLATE = f"""\
         {{{{FrontSide}}}}
 
         <hr id=answer>
-
+        {{{{{Notetype.TITLE_FIELD_ID}}}}}<br />
         {{{{{Notetype.FULLTEXT_FIELD_ID}}}}}\
     """
 
@@ -152,6 +158,9 @@ def add_card_types():
     if models.by_name(Notetype.ID):
         memorizerNoteType = models.by_name(Notetype.ID)
         memorizerNoteType['css'] = Notetype.DEFAULT_STYLE
+
+        if not (Notetype.TITLE_FIELD_ID in models.field_map(memorizerNoteType)):
+            models.add_field(memorizerNoteType, models.new_field(Notetype.TITLE_FIELD_ID))
 
         cardTemplates = memorizerNoteType['tmpls']
 
@@ -167,6 +176,8 @@ def add_card_types():
         linestartsCardTemplate['qfmt'] = LineStartCard.FRONT_TEMPLATE
         linestartsCardTemplate['afmt'] = LineStartCard.BACK_TEMPLATE
 
+        memorizerNoteType['sortf'] = 1
+
         models.save(memorizerNoteType)
         return memorizerNoteType
     
@@ -174,6 +185,7 @@ def add_card_types():
         memorizerNoteType : NotetypeDict = models.new(Notetype.ID)
         # Add fields:
         models.addField(memorizerNoteType, models.new_field(Notetype.FULLTEXT_FIELD_ID))
+        models.add_field(memorizerNoteType, models.new_field(Notetype.TITLE_FIELD_ID))
 
         # Add templates (this is all the same. It wouldn't be to hard to make them a class and have a method that aligns the registered cards with what's defined)
         fulltextCardTemplate = models.new_template(FulltextCard.ID)
@@ -192,7 +204,10 @@ def add_card_types():
         models.add_template(memorizerNoteType, linestartsCardTemplate)
 
         memorizerNoteType['css'] = Notetype.DEFAULT_STYLE
+        memorizerNoteType['sortf'] = 1
+
         models.add(memorizerNoteType)
+        
         return memorizerNoteType
 
 def setup_main():
