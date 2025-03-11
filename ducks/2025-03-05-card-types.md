@@ -71,3 +71,8 @@ Anki's mobile apps [don't support addons](https://forums.ankiweb.net/t/how-to-in
 
 The workaround for this is probably to follow the [japanese addon](https://addon-docs.ankiweb.net/hooks-and-filters.html#legacy-hook-handling).
 Add fields for the transformed versions and generate them when the OriginalText field loses focus
+
+
+## Cloze Deletion
+
+Keegan pointed out that Memorizer is using a variation of [Cloze Deletion](https://en.wikipedia.org/wiki/Cloze_test)
