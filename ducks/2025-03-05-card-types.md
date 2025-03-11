@@ -67,7 +67,7 @@ PROBLEM: I'm realizing that now I'm sorting on title, but also considering the f
 
 ## PROBLEM: No Addons on Mobile
 
-Anki's mobile apps don't support addons, which means that cards which are supposed to show filtered are showing the full text.
+Anki's mobile apps [don't support addons](https://forums.ankiweb.net/t/how-to-install-add-ons-in-android-13/29489), which means that cards which are supposed to show filtered are showing the full text.
 
 The workaround for this is probably to follow the [japanese addon](https://addon-docs.ankiweb.net/hooks-and-filters.html#legacy-hook-handling).
 Add fields for the transformed versions and generate them when the OriginalText field loses focus

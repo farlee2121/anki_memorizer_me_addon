@@ -134,7 +134,7 @@ class FulltextCard:
 
 class WordStartCard: 
     ID = "Memorizer Wordstarts"
-    FRONT_TEMPLATE = "{{"+ WordStartsFilter.FILTER_ID + ":" + Notetype.TITLE_FIELD_ID+"}}<br />{{" + WordStartsFilter.FILTER_ID + ":" + Notetype.FULLTEXT_FIELD_ID + "}}"
+    FRONT_TEMPLATE = "{{"+ Notetype.WORDSTARTS_FIELD_ID + "}}"
     BACK_TEMPLATE = f"""\
         {{{{FrontSide}}}}
 
@@ -146,7 +146,7 @@ class WordStartCard:
 
 class LineStartCard: 
     ID = "Memorizer Linestarts"
-    FRONT_TEMPLATE = "{{"+ WordStartsFilter.FILTER_ID + ":"+ Notetype.TITLE_FIELD_ID+"}}<br />{{"+ LineStartsFilter.FILTER_ID + ":" + Notetype.FULLTEXT_FIELD_ID + "}}"
+    FRONT_TEMPLATE = "{{"+ Notetype.LINESTARTS_FIELD_ID + "}}"
     BACK_TEMPLATE = f"""\
         {{{{FrontSide}}}}
 
@@ -224,8 +224,8 @@ def on_field_unfocus(changed: bool, note: Note, fieldIndex: int) -> bool:
     models = mw.col.models
     memorizerNoteType = models.by_name(Notetype.ID)
     sourceFieldName = models.field_names(memorizerNoteType)[fieldIndex]
-    if(sourceFieldName == Notetype.FULLTEXT_FIELD_ID):
-        srcText = note[Notetype.FULLTEXT_FIELD_ID]
+    if(sourceFieldName in [Notetype.FULLTEXT_FIELD_ID, Notetype.TITLE_FIELD_ID]):
+        srcText = note[Notetype.TITLE_FIELD_ID] +"<br />" + note[Notetype.FULLTEXT_FIELD_ID]
         note[Notetype.WORDSTARTS_FIELD_ID] = MemorizerTransforms.wordStartsOnly_ForHtml(srcText)
         note[Notetype.LINESTARTS_FIELD_ID] = MemorizerTransforms.lineStartsOnly_ForHtml(srcText)
         return True
