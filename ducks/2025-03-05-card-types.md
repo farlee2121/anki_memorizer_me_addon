@@ -63,3 +63,11 @@ Q: should I add a separate field for the verse number / or "title"?
 - I'm realizing that there isn't easy initial context for what verse I'm working with. I have to guess it from the partial I have. My focus is memorizing the text, not the verse numbers. And if I want to memorize the verse numbers then i should probably add a card that has the verse number as the answer to the full text
 
 PROBLEM: I'm realizing that now I'm sorting on title, but also considering the field optional. So I don't know how anki will handle sorting...
+
+
+## PROBLEM: No Addons on Mobile
+
+Anki's mobile apps don't support addons, which means that cards which are supposed to show filtered are showing the full text.
+
+The workaround for this is probably to follow the [japanese addon](https://addon-docs.ankiweb.net/hooks-and-filters.html#legacy-hook-handling).
+Add fields for the transformed versions and generate them when the OriginalText field loses focus

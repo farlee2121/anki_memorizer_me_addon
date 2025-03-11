@@ -11,6 +11,7 @@ from aqt import mw, AnkiQt, gui_hooks
 from anki.models import ModelManager, NotetypeDict, FieldDict
 from aqt.qt import QTextDocument
 from anki import hooks
+from anki.notes import Note
 from anki.template import TemplateRenderContext
 
 
@@ -107,6 +108,8 @@ class Notetype:
     ID = "Memorizer"
     TITLE_FIELD_ID = "Title"
     FULLTEXT_FIELD_ID = "OriginalText"
+    WORDSTARTS_FIELD_ID = "Wordstarts"
+    LINESTARTS_FIELD_ID = "Linestarts"
 
     DEFAULT_STYLE = """\
     .card {
@@ -152,6 +155,10 @@ class LineStartCard:
         {{{{{Notetype.FULLTEXT_FIELD_ID}}}}}\
     """
 
+def upsert_field(models: ModelManager, noteType: NotetypeDict, fieldName: str):
+    if not (fieldName in models.field_map(noteType)):
+        models.add_field(noteType, models.new_field(fieldName))
+
 def add_card_types():
     models: ModelManager = mw.col.models
 
@@ -159,8 +166,9 @@ def add_card_types():
         memorizerNoteType = models.by_name(Notetype.ID)
         memorizerNoteType['css'] = Notetype.DEFAULT_STYLE
 
-        if not (Notetype.TITLE_FIELD_ID in models.field_map(memorizerNoteType)):
-            models.add_field(memorizerNoteType, models.new_field(Notetype.TITLE_FIELD_ID))
+        upsert_field(models, memorizerNoteType, Notetype.TITLE_FIELD_ID)
+        upsert_field(models, memorizerNoteType, Notetype.WORDSTARTS_FIELD_ID)
+        upsert_field(models, memorizerNoteType, Notetype.LINESTARTS_FIELD_ID)
 
         cardTemplates = memorizerNoteType['tmpls']
 
@@ -186,6 +194,8 @@ def add_card_types():
         # Add fields:
         models.addField(memorizerNoteType, models.new_field(Notetype.FULLTEXT_FIELD_ID))
         models.add_field(memorizerNoteType, models.new_field(Notetype.TITLE_FIELD_ID))
+        models.add_field(memorizerNoteType, models.new_field(Notetype.WORDSTARTS_FIELD_ID))
+        models.add_field(memorizerNoteType, models.new_field(Notetype.LINESTARTS_FIELD_ID))
 
         # Add templates (this is all the same. It wouldn't be to hard to make them a class and have a method that aligns the registered cards with what's defined)
         fulltextCardTemplate = models.new_template(FulltextCard.ID)
@@ -209,12 +219,25 @@ def add_card_types():
         models.add(memorizerNoteType)
         
         return memorizerNoteType
+    
+def on_field_unfocus(changed: bool, note: Note, fieldIndex: int) -> bool:
+    models = mw.col.models
+    memorizerNoteType = models.by_name(Notetype.ID)
+    sourceFieldName = models.field_names(memorizerNoteType)[fieldIndex]
+    if(sourceFieldName == Notetype.FULLTEXT_FIELD_ID):
+        srcText = note[Notetype.FULLTEXT_FIELD_ID]
+        note[Notetype.WORDSTARTS_FIELD_ID] = MemorizerTransforms.wordStartsOnly_ForHtml(srcText)
+        note[Notetype.LINESTARTS_FIELD_ID] = MemorizerTransforms.lineStartsOnly_ForHtml(srcText)
+        return True
+    else:
+        return False
 
 def setup_main():
     """Registers plugin with Anki."""
     hooks.field_filter.append(WordStartsFilter.wordstarts_filter)
     hooks.field_filter.append(LineStartsFilter.linestarts_filter)
     gui_hooks.main_window_did_init.append(add_card_types)
+    gui_hooks.editor_did_unfocus_field.append(on_field_unfocus)
 
 # register plugin with hooks
 setup_main()
